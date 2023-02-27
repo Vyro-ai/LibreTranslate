@@ -2,6 +2,8 @@ import io
 import os
 import tempfile
 import re
+import time
+import traceback
 import uuid
 from functools import wraps
 from html import unescape
@@ -27,6 +29,7 @@ from libretranslate.locales import (_, _lazy, get_available_locales, get_availab
 from .api_keys import Database, RemoteDatabase
 from .suggestions import Database as SuggestionsDatabase
 
+from libretranslate.logger import Logger
 
 def get_version():
     try:
@@ -113,6 +116,11 @@ def create_app(args):
 
     SWAGGER_URL = args.url_prefix + "/docs"  # Swagger UI (w/o trailing '/')
     API_URL = args.url_prefix + "/spec"
+
+    # Creating logger and its required variables
+    start_time = ""
+    FILE_NAME = "translator.log"
+    logger = Logger("translator_server", file=FILE_NAME)
 
     bp = Blueprint('Main app', __name__)
 
@@ -353,6 +361,11 @@ def create_app(args):
         return jsonify([{"code": l.code, "name": _lazy(l.name), "targets": language_pairs.get(l.code, [])} for l in languages])
 
     # Add cors
+    @bp.before_request
+    def before_request():
+        nonlocal start_time
+        start_time = time.time()
+
     @bp.after_request
     def after_request(response):
         response.headers.add("Access-Control-Allow-Origin", "*")
@@ -363,6 +376,13 @@ def create_app(args):
         response.headers.add("Access-Control-Allow-Methods", "GET, POST")
         response.headers.add("Access-Control-Allow-Credentials", "true")
         response.headers.add("Access-Control-Max-Age", 60 * 60 * 24 * 20)
+        
+        # Logging response
+        if response.status_code == 200:  
+          time_taken = time.time() - start_time
+          logger.log_successful_request(time_taken)
+        else:
+          logger.log_exception(response.json['error'])
         return response
 
     @bp.post("/translate")
