@@ -235,6 +235,14 @@ You can pass application arguments directly to Gunicorn via:
 gunicorn --bind 0.0.0.0:5000 'wsgi:app(api_keys=True)'
 ```
 
+To run its service in background:
+
+```
+sudo cp vyro-translator/translator.service /etc/systemd/system
+sudo systemctl restart translator.service 
+sudo systemctl status translator.service 
+```
+
 ## Run with Kubernetes
 
 See ["LibreTranslate: your own translation service on Kubernetes" by JM Robles](https://jmrobles.medium.com/libretranslate-your-own-translation-service-on-kubernetes-b46c3e1af630)
